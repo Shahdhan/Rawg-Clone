@@ -165,7 +165,7 @@ APP_NAME=GamePlatform
 APP_URL=http://localhost:8000
 DB_CONNECTION=mysql
 DB_DATABASE=game_platform
-RAWG_API_KEY=your_rawg_api_key
+RAWG_API_KEY=a69547cf7125409b8debf7637cff7948
 ```
 
 ### Frontend (.env.local)
