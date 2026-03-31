@@ -6,6 +6,7 @@ export interface Game {
   title: string;
   release_date: string;
   background_image: string;
+  description?: string;
   rating: number;
   rating_top: number;
   ratings_count: number;
@@ -60,10 +61,8 @@ export async function fetchGames(filters?: {
     const url = `${API_URL}/api/games${queryString ? `?${queryString}` : ''}`;
 
     const response = await fetch(url, {
-      cache: 'no-store',
       headers: {
         'Accept': 'application/json',
-        'Content-Type': 'application/json',
       },
     });
 
@@ -85,10 +84,8 @@ export async function fetchGames(filters?: {
 export async function fetchGame(id: string): Promise<Game | null> {
   try {
     const response = await fetch(`${API_URL}/api/games/${id}`, {
-      cache: 'no-store',
       headers: {
         'Accept': 'application/json',
-        'Content-Type': 'application/json',
       },
     });
 

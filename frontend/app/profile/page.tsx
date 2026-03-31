@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Navbar from "../components/Navbar";
+import Loading from "../components/Loading";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -14,7 +15,7 @@ interface Review {
   rating: number;
   comment: string;
   created_at: string;
-  game?: { name: string };
+  game?: { title: string };
 }
 
 // ✅ NEW: Favorite interface
@@ -36,10 +37,12 @@ export default function Profile() {
   const [favorites, setFavorites] = useState<Favorite[]>([]); // ✅ NEW
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
-  const [editForm, setEditForm] = useState({ name: "", email: "" });
+  const [editForm, setEditForm] = useState({ name: "", email: "", bio: "" });
   const [uploadingPicture, setUploadingPicture] = useState(false);
   const [picturePreview, setPicturePreview] = useState<string>("");
   const [saveLoading, setSaveLoading] = useState(false);
+  const [unsubscribed, setUnsubscribed] = useState(false);
+  const [followStats, setFollowStats] = useState({ followers_count: 0, following_count: 0 });
 
   useEffect(() => {
     const userData = localStorage.getItem("user");
@@ -50,9 +53,15 @@ export default function Profile() {
     } else {
       const parsedUser = JSON.parse(userData);
       setUser(parsedUser);
-      setEditForm({ name: parsedUser.name, email: parsedUser.email });
+      setUnsubscribed(parsedUser.unsubscribed ?? false);
+      setEditForm({
+        name: parsedUser.name,
+        email: parsedUser.email,
+        bio: parsedUser.bio ?? "",
+      });
       fetchUserReviews(parsedUser.id, token);
-      fetchFavorites(token); // ✅ NEW
+      fetchFavorites(token);
+      fetchFollowStats(token);
     }
   }, [router]);
 
@@ -75,7 +84,6 @@ export default function Profile() {
     }
   };
 
-  // ✅ NEW: Fetch favorites
   const fetchFavorites = async (token: string) => {
     try {
       const response = await fetch(`${API_URL}/api/favorites`, {
@@ -91,6 +99,15 @@ export default function Profile() {
     } catch (error) {
       console.error("Error fetching favorites", error);
     }
+  };
+
+  const fetchFollowStats = async (token: string) => {
+    try {
+      const res = await fetch(`${API_URL}/api/profile/stats`, {
+        headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+      });
+      if (res.ok) setFollowStats(await res.json());
+    } catch {}
   };
 
   // ✅ NEW: Remove from favorites
@@ -186,6 +203,17 @@ export default function Profile() {
     router.push("/");
   };
 
+  const handleSubscriptionToggle = async () => {
+    const endpoint = unsubscribed ? "subscribe" : "unsubscribe";
+    const res = await fetch(`${API_URL}/api/${endpoint}/${user.id}`);
+    if (res.ok) {
+      const newState = !unsubscribed;
+      setUnsubscribed(newState);
+      const updatedUser = { ...user, unsubscribed: newState };
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+    }
+  };
+
   const getUserInitials = (name: string) => {
     if (!name) return "??";
     return name
@@ -200,9 +228,7 @@ export default function Profile() {
     return (
       <div className="min-h-screen bg-gray-950">
         <Navbar onSearch={() => {}} />
-        <div className="flex items-center justify-center py-20">
-          <p className="text-white text-xl">Loading profile...</p>
-        </div>
+        <Loading />
       </div>
     );
   }
@@ -213,42 +239,59 @@ export default function Profile() {
     <div className="min-h-screen bg-gray-950">
       <Navbar onSearch={() => {}} />
 
-      <div className="max-w-4xl mx-auto p-8">
-        {/* Profile Section */}
-        <div className="bg-gray-900 rounded-lg p-8 mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <h1 className="text-3xl font-bold text-white">My Profile</h1>
-            <button
-              onClick={handleLogout}
-              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition"
-            >
-              Logout
-            </button>
+      <div className="max-w-3xl mx-auto px-6 py-10 space-y-6">
+        <Link href="/" className="inline-flex items-center gap-2 text-gray-400 hover:text-white text-sm transition">
+          <span>←</span> Back
+        </Link>
+        {/* Profile Card */}
+        <div className="bg-gray-900 rounded-2xl p-8">
+          {/* Top row */}
+          <div className="flex items-center justify-between mb-8">
+            <h1 className="text-2xl font-bold text-white">Profile</h1>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleSubscriptionToggle}
+                className={`text-xs px-3 py-1.5 rounded-full transition border ${
+                  unsubscribed
+                    ? "border-green-600 text-green-400 hover:bg-green-900/30"
+                    : "border-gray-600 text-gray-400 hover:bg-gray-800"
+                }`}
+              >
+                {unsubscribed ? "Subscribe" : "Unsubscribe"}
+              </button>
+              <button
+                onClick={handleLogout}
+                className="text-xs px-3 py-1.5 rounded-full border border-red-700 text-red-400 hover:bg-red-900/30 transition"
+              >
+                Logout
+              </button>
+            </div>
           </div>
 
-          <div className="flex gap-8">
-            <div className="flex-shrink-0">
+          <div className="flex gap-8 items-start">
+            {/* Avatar */}
+            <div className="shrink-0 flex flex-col items-center gap-3">
               <div className="relative">
                 {user.profile_picture || picturePreview ? (
                   <img
                     src={picturePreview || user.profile_picture}
                     alt={user.name}
-                    className="w-32 h-32 rounded-full object-cover border-4 border-gray-700"
+                    className="w-24 h-24 rounded-full object-cover border-2 border-gray-700"
                   />
                 ) : (
-                  <div className="w-32 h-32 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center border-4 border-gray-700">
-                    <span className="text-white text-4xl font-bold">
+                  <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center border-2 border-gray-700">
+                    <span className="text-white text-3xl font-bold">
                       {getUserInitials(user.name)}
                     </span>
                   </div>
                 )}
                 <label
                   htmlFor="picture-upload"
-                  className="absolute bottom-0 right-0 bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-full cursor-pointer transition"
+                  className="absolute bottom-0 right-0 bg-gray-800 hover:bg-gray-700 border border-gray-600 text-white p-1.5 rounded-full cursor-pointer transition"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5"
+                    className="h-3.5 w-3.5"
                     viewBox="0 0 20 20"
                     fill="currentColor"
                   >
@@ -263,19 +306,18 @@ export default function Profile() {
                   className="hidden"
                 />
               </div>
-
               {picturePreview && (
-                <div className="mt-4 space-y-2">
+                <div className="flex flex-col gap-1 w-24">
                   <button
                     onClick={handleUploadPicture}
                     disabled={uploadingPicture}
-                    className="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition disabled:opacity-50"
+                    className="text-xs bg-green-700 hover:bg-green-600 text-white py-1.5 rounded-lg transition disabled:opacity-50"
                   >
-                    {uploadingPicture ? "Uploading..." : "Save Picture"}
+                    {uploadingPicture ? "Saving..." : "Save"}
                   </button>
                   <button
                     onClick={() => setPicturePreview("")}
-                    className="w-full bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition"
+                    className="text-xs bg-gray-700 hover:bg-gray-600 text-white py-1.5 rounded-lg transition"
                   >
                     Cancel
                   </button>
@@ -283,22 +325,41 @@ export default function Profile() {
               )}
             </div>
 
+            {/* Info / Edit form */}
             <div className="flex-1">
               {!isEditing ? (
-                <div className="space-y-4">
+                <div className="space-y-6">
                   <div>
-                    <label className="text-gray-400 text-sm">Name</label>
-                    <p className="text-white text-xl font-semibold">
+                    <p className="text-xs text-gray-500 uppercase tracking-wider mb-0.5">
+                      Name
+                    </p>
+                    <p className="text-white text-lg font-semibold">
                       {user.name}
                     </p>
+                    <div className="flex gap-5 mt-2">
+                      <span className="text-sm text-gray-300"><span className="font-bold text-white">{followStats.followers_count}</span> <span className="text-gray-500">Followers</span></span>
+                      <span className="text-sm text-gray-300"><span className="font-bold text-white">{followStats.following_count}</span> <span className="text-gray-500">Following</span></span>
+                    </div>
                   </div>
                   <div>
-                    <label className="text-gray-400 text-sm">Email</label>
-                    <p className="text-white text-xl">{user.email}</p>
+                    <p className="text-xs text-gray-500 uppercase tracking-wider mb-0.5">
+                      Email
+                    </p>
+                    <p className="text-gray-300">{user.email}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase tracking-wider mb-0.5">
+                      Bio
+                    </p>
+                    <p className="text-gray-300 text-sm leading-relaxed">
+                      {user.bio || (
+                        <span className="text-gray-600 italic">No bio yet</span>
+                      )}
+                    </p>
                   </div>
                   <button
                     onClick={() => setIsEditing(true)}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition mt-4"
+                    className="mt-2 text-sm text-gray-400 hover:text-white border border-gray-700 hover:border-gray-500 px-4 py-1.5 rounded-full transition"
                   >
                     Edit Profile
                   </button>
@@ -306,40 +367,62 @@ export default function Profile() {
               ) : (
                 <form onSubmit={handleUpdateProfile} className="space-y-4">
                   <div>
-                    <label className="block text-gray-400 mb-2">Name</label>
+                    <label className="block text-xs text-gray-500 uppercase tracking-wider mb-1">
+                      Name
+                    </label>
                     <input
                       type="text"
                       value={editForm.name}
                       onChange={(e) =>
                         setEditForm({ ...editForm, name: e.target.value })
                       }
-                      className="w-full p-3 bg-gray-800 text-white rounded border border-gray-700 focus:border-blue-500 focus:outline-none"
+                      className="w-full px-4 py-2 bg-gray-800 text-white rounded-lg border border-gray-700 focus:border-gray-500 focus:outline-none text-sm"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-gray-400 mb-2">Email</label>
+                    <label className="block text-xs text-gray-500 uppercase tracking-wider mb-1">
+                      Email
+                    </label>
                     <input
                       type="email"
                       value={editForm.email}
                       onChange={(e) =>
                         setEditForm({ ...editForm, email: e.target.value })
                       }
-                      className="w-full p-3 bg-gray-800 text-white rounded border border-gray-700 focus:border-blue-500 focus:outline-none"
+                      className="w-full px-4 py-2 bg-gray-800 text-white rounded-lg border border-gray-700 focus:border-gray-500 focus:outline-none text-sm"
                       required
                     />
                   </div>
-                  <div className="flex gap-4">
+                  <div>
+                    <label className="block text-xs text-gray-500 uppercase tracking-wider mb-1">
+                      Bio
+                    </label>
+                    <textarea
+                      value={editForm.bio}
+                      onChange={(e) =>
+                        setEditForm({ ...editForm, bio: e.target.value })
+                      }
+                      maxLength={300}
+                      rows={3}
+                      className="w-full px-4 py-2 bg-gray-800 text-white rounded-lg border border-gray-700 focus:border-gray-500 focus:outline-none resize-none text-sm"
+                      placeholder="Tell others about yourself..."
+                    />
+                    <p className="text-gray-600 text-xs text-right mt-0.5">
+                      {editForm.bio.length}/300
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
                     <button
                       type="submit"
-                      className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg transition"
+                      className="text-sm bg-white text-gray-900 font-semibold px-5 py-2 rounded-full hover:bg-gray-200 transition"
                     >
-                      Save Changes
+                      Save
                     </button>
                     <button
                       type="button"
                       onClick={() => setIsEditing(false)}
-                      className="bg-gray-700 hover:bg-gray-600 text-white px-6 py-2 rounded-lg transition"
+                      className="text-sm text-gray-400 hover:text-white border border-gray-700 px-5 py-2 rounded-full transition"
                     >
                       Cancel
                     </button>
@@ -350,44 +433,44 @@ export default function Profile() {
           </div>
         </div>
 
-        {/* ✅ NEW: Favorites Section */}
-        <div className="bg-gray-900 rounded-lg p-8 mb-8">
-          <h2 className="text-2xl font-bold text-white mb-6">My Favorites</h2>
+        {/* Favorites */}
+        <div className="bg-gray-900 rounded-2xl p-8">
+          <h2 className="text-lg font-semibold text-white mb-5">Favorites</h2>
           {favorites.length === 0 ? (
-            <p className="text-gray-400 text-center py-8">
-              You haven't added any favorites yet.
+            <p className="text-gray-600 text-sm text-center py-6">
+              No favorites yet.
             </p>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {favorites.map((fav) => (
                 <div
                   key={fav.id}
-                  className="bg-gray-800 rounded-lg overflow-hidden flex items-center gap-4 p-3"
+                  className="flex items-center gap-3 bg-gray-800 rounded-xl p-3"
                 >
                   {fav.game?.background_image && (
                     <img
                       src={fav.game.background_image}
                       alt={fav.game.title}
-                      className="w-20 h-14 object-cover rounded"
+                      className="w-16 h-11 object-cover rounded-lg shrink-0"
                     />
                   )}
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <Link href={`/games/${fav.game_id}`}>
-                      <p className="text-white font-semibold hover:text-blue-400 transition">
+                      <p className="text-white text-sm font-medium truncate hover:text-gray-300 transition">
                         {fav.game?.title}
                       </p>
                     </Link>
                     {fav.game?.rating && (
-                      <p className="text-yellow-400 text-sm">
+                      <p className="text-yellow-400 text-xs">
                         ★ {fav.game.rating}
                       </p>
                     )}
                   </div>
                   <button
                     onClick={() => handleRemoveFavorite(fav.game_id)}
-                    className="text-red-400 hover:text-red-300 text-sm px-2"
+                    className="text-gray-600 hover:text-red-400 transition text-lg shrink-0"
                   >
-                    Remove
+                    ×
                   </button>
                 </div>
               ))}
@@ -395,29 +478,34 @@ export default function Profile() {
           )}
         </div>
 
-        {/* Reviews Section */}
-        <div className="bg-gray-900 rounded-lg p-8">
-          <h2 className="text-2xl font-bold text-white mb-6">My Reviews</h2>
+        {/* Reviews */}
+        <div className="bg-gray-900 rounded-2xl p-8">
+          <h2 className="text-lg font-semibold text-white mb-5">Reviews</h2>
           {reviews.length === 0 ? (
-            <p className="text-gray-400 text-center py-8">
-              You haven't written any reviews yet.
+            <p className="text-gray-600 text-sm text-center py-6">
+              No reviews yet.
             </p>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {reviews.map((review) => (
-                <div
-                  key={review.id}
-                  className="bg-gray-800 p-6 rounded-lg border border-gray-700"
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-yellow-400 font-semibold">
-                      ★ {review.rating}/10
+                <div key={review.id} className="bg-gray-800 rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-white text-sm font-semibold truncate">
+                      {review.game?.title ?? "Unknown Game"}
                     </span>
-                    <span className="text-gray-400 text-sm">
+                    <span className="text-gray-600 text-xs shrink-0 ml-2">
                       {new Date(review.created_at).toLocaleDateString()}
                     </span>
                   </div>
-                  <p className="text-gray-300">{review.comment}</p>
+                  <div className="flex items-center gap-1 mb-2">
+                    {[1,2,3,4,5].map((s) => (
+                      <span key={s} className={`text-sm ${s <= review.rating ? "text-yellow-400" : "text-gray-600"}`}>★</span>
+                    ))}
+                    <span className="text-gray-500 text-xs ml-1">{review.rating}/5</span>
+                  </div>
+                  <p className="text-gray-300 text-sm leading-relaxed">
+                    {review.comment}
+                  </p>
                 </div>
               ))}
             </div>

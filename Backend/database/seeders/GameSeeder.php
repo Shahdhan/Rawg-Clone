@@ -24,7 +24,7 @@ class GameSeeder extends Seeder
          $allGames = [];
 
 
-        for ($page = 1; $page <= 15; $page++) {
+        for ($page = 1; $page <= 25; $page++) {
         $response = Http::withoutVerifying()->get("https://api.rawg.io/api/games", [
             'key' => $apiKey,
             'page_size' => 40,
@@ -33,7 +33,7 @@ class GameSeeder extends Seeder
 
         if ($response->successful()) {
             $allGames = array_merge($allGames, $response->json()['results']);
-            $this->command->info("Fetched page {$page}/15...");
+            $this->command->info("Fetched page {$page}/25...");
         }
         }
 
@@ -41,13 +41,22 @@ class GameSeeder extends Seeder
             $games = $response->json()['results'];
 
             foreach ($allGames as $data) {
+                // Fetch individual game detail to get description_raw
+                $description = null;
+                $detailResponse = Http::withoutVerifying()->get("https://api.rawg.io/api/games/{$data['id']}", [
+                    'key' => $apiKey,
+                ]);
+                if ($detailResponse->successful()) {
+                    $description = $detailResponse->json()['description_raw'] ?? null;
+                }
+
                 $game = Game::updateOrCreate(
-                    ['rawg_id' => $data['id']], 
-            [
+                    ['rawg_id' => $data['id']],
+                    [
                         'title' => $data['name'],
                         'slug' => $data['slug'] ?? Str::slug($data['name']),
                         'background_image' => $data['background_image'],
-                        'description'      => $data['description_raw'] ?? null,
+                        'description' => $description,
                         'rating' => $data['rating'],
                         'release_date' => $data['released'],
                     ]

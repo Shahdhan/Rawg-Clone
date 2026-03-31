@@ -7,7 +7,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 interface Review {
   id: number;
   user_id: number;
-  user_name: string;
+  user?: { name: string };
   rating: number;
   comment: string;
 }
@@ -78,7 +78,7 @@ export default function ReviewSection({ gameId }: Props) {
 
       const newReview = await res.json();
       setReviews([...reviews, newReview]);
-      setRating(5);
+      setRating(0);
       setComment("");
     } catch (err) {
       console.error("Error submitting review:", err);
@@ -140,14 +140,19 @@ export default function ReviewSection({ gameId }: Props) {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4 mb-8">
-        <input
-          type="number"
-          min="1"
-          max="10"
-          value={rating}
-          onChange={(e) => setRating(Number(e.target.value))}
-          className="w-full p-2 bg-gray-800 rounded"
-        />
+        <div className="flex items-center gap-1">
+          {[1, 2, 3, 4, 5].map((star) => (
+            <button
+              key={star}
+              type="button"
+              onClick={() => setRating(star)}
+              className={`text-3xl transition ${star <= rating ? "text-yellow-400" : "text-gray-600"}`}
+            >
+              ★
+            </button>
+          ))}
+          <span className="text-gray-400 text-sm ml-2">({rating}/5)</span>
+        </div>
 
         <textarea
           value={comment}
@@ -172,14 +177,21 @@ export default function ReviewSection({ gameId }: Props) {
             {editingId === review.id ? (
               // ✅ Edit mode
               <div className="space-y-2">
-                <input
-                  type="number"
-                  min="1"
-                  max="10"
-                  value={editRating}
-                  onChange={(e) => setEditRating(Number(e.target.value))}
-                  className="w-full p-2 bg-gray-700 rounded"
-                />
+                <div className="flex items-center gap-1">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setRating(star)}
+                      className={`text-3xl transition ${star <= rating ? "text-yellow-400" : "text-gray-600"}`}
+                    >
+                      ★
+                    </button>
+                  ))}
+                  <span className="text-gray-400 text-sm ml-2">
+                    ({rating}/5)
+                  </span>
+                </div>
                 <textarea
                   value={editComment}
                   onChange={(e) => setEditComment(e.target.value)}
@@ -204,7 +216,7 @@ export default function ReviewSection({ gameId }: Props) {
               // ✅ View mode
               <>
                 <div className="flex items-center justify-between mb-2">
-                  <h4 className="font-bold">{review.user_name}</h4>
+                  <h4 className="font-bold">{review.user?.name ?? "Unknown"}</h4>
                   {/* ✅ Only show edit/delete to review owner */}
                   {userId === review.user_id && (
                     <div className="flex gap-2">
@@ -227,7 +239,20 @@ export default function ReviewSection({ gameId }: Props) {
                     </div>
                   )}
                 </div>
-                <p>Rating: {review.rating}/10</p>
+                <div className="flex items-center gap-1 mb-1">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <span
+                      key={star}
+                      className={`text-lg ${star <= review.rating ? "text-yellow-400" : "text-gray-600"}`}
+                    >
+                      ★
+                    </span>
+                  ))}
+                  <span className="text-gray-400 text-xs ml-1">
+                    ({review.rating}/5)
+                  </span>
+                </div>
+                <p>Rating: {review.rating}/5</p>
                 <p className="text-gray-400">{review.comment}</p>
               </>
             )}
