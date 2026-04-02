@@ -58,3 +58,13 @@ A PR is created on GitHub to merge `feature/recommendations` into `master` with 
 ## Why Squashing?
 
 Squashing combines multiple work-in-progress commits into one clean commit. This keeps the git history readable — each feature branch results in exactly one commit on `master`, making it easy to understand what was added and to revert if needed.
+
+## Screenshots
+
+### Before Squashing
+
+![Before Squashing](before-squashing.png)
+
+### After Squashing
+
+![After Squashing](after-squashing.png)
