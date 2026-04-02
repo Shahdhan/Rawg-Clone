@@ -1,7 +1,8 @@
-@import url('https://fonts.googleapis.com/css2?family=Josefin+Sans:ital,wght@0,100..700;1,100..700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Josefin+Sans:ital,wght@0,100..700;1,100..700&family=Sora:wght@100..800&display=swap');
 @import "tailwindcss";
 @theme{
   --font-sans: 'Josefin Sans', sans-serif;
+  --font-sora: 'Sora', sans-serif;
 }
 
 
@@ -9,8 +10,25 @@
   font-family: 'Josefin Sans', sans-serif;
 }
 
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Sora', sans-serif;
+}
+
+html {
+  font-size: 17px;
+}
+
 body {
   margin: 0;
   padding: 0;
   background-color: #030712;
+}
+
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }

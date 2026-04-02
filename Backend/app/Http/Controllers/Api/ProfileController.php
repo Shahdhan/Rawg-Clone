@@ -16,6 +16,7 @@ class ProfileController extends Controller
         $validator = Validator::make($request->all(),[
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email,' . $user->id,
+            'bio' => 'nullable|string|max:300',
         ]);
 
         if($validator->fails()){
@@ -27,6 +28,7 @@ class ProfileController extends Controller
 
         $user->name = $request->name;
         $user->email = $request->email;
+        $user->bio = $request->bio;
         $user->save();
 
         return response()->json([
@@ -64,12 +66,22 @@ class ProfileController extends Controller
         ]);
     }
 
+    public function stats(Request $request)
+    {
+        $user = \App\Models\User::withCount(['followers', 'following'])->find(Auth::id());
+        return response()->json([
+            'followers_count' => $user->followers_count,
+            'following_count' => $user->following_count,
+        ]);
+    }
+
     public function getUserReviews($userId)
     {
-        $reviews = \App\Models\Review::with('game', $userId)
-            ->orderBy('created_at', "desc")
+        $reviews = \App\Models\Review::where('user_id', $userId)
+            ->with('game')
+            ->orderBy('created_at', 'desc')
             ->get();
 
-            return response()->json($reviews);
+        return response()->json($reviews);
     }
 }

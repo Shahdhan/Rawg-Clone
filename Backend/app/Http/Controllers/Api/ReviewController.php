@@ -19,7 +19,7 @@ class ReviewController extends Controller
     public function store(Request $request){
         $validated= $request->validate([
             'game_id' => 'required|exists:games,id',
-            'rating' => 'required|integer|min:1|max:10',
+            'rating' => 'required|integer|min:1|max:5',
             "comment" => 'required|string',
         ]);
 
@@ -37,7 +37,7 @@ class ReviewController extends Controller
         }
 
         $request->validate([
-            'rating' => 'integer|min:1|max:10',
+            'rating' => 'integer|min:1|max:5',
             'comment' => 'string',
         ]);
 
